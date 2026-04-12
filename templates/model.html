@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model — CCFD</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background: #0a0a0a; color: #fff; font-family: 'Roboto', sans-serif; }
+
+    /* ── Navbar ── */
+    .navbar-brand { font-size: 1.5rem; }
+    .nav-item a { position: relative; text-decoration: none; font-size: 1.1rem; }
+    .nav-item a::after {
+      content: ""; position: absolute; bottom: 3px; left: 7px;
+      width: 100%; height: .1em; background: #000;
+      opacity: 0; transition: opacity .5s, transform .5s;
+      transform: translate3d(-100%,0,0);
+    }
+    .nav-item a:hover::after { opacity: 1; transform: translate3d(0,0,0); }
+
+    /* ── Page header ── */
+    .page-header {
+      background: linear-gradient(135deg, rgba(102,126,234,.12), rgba(118,75,162,.12));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px; padding: 2rem 2.5rem;
+      margin: 6rem auto 2rem; max-width: 1100px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    }
+    .page-header h1 {
+      font-size: 1.8rem; font-weight: 700;
+      background: linear-gradient(135deg,#667eea,#764ba2);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .model-badge {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(102,126,234,.15); border: 1px solid rgba(102,126,234,.4);
+      border-radius: 20px; padding: .3rem 1rem; font-size: .85rem; color: #a5b4fc;
+    }
+
+    /* ── Tabs ── */
+    .tabs-wrap { max-width: 1100px; margin: 0 auto 1.5rem; padding: 0 1rem; }
+    .tabs {
+      display: flex; gap: .5rem;
+      background: rgba(255,255,255,.04); border-radius: 12px; padding: .4rem;
+    }
+    .tab-btn {
+      flex: 1; padding: .65rem 1rem; border: none; border-radius: 8px;
+      background: transparent; color: rgba(255,255,255,.5);
+      font-size: .95rem; cursor: pointer; transition: all .2s;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg,#667eea,#764ba2);
+      color: #fff; font-weight: 600;
+    }
+
+    /* ── Main content ── */
+    .content-wrap { max-width: 1100px; margin: 0 auto; padding: 0 1rem 4rem; }
+
+    /* ── Card ── */
+    .card-dark {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px; padding: 1.8rem; backdrop-filter: blur(8px);
+    }
+    .card-dark h2 { font-size: 1.05rem; margin-bottom: 1.2rem; color: rgba(255,255,255,.85); font-weight: 500; }
+    .section-label {
+      font-size: .75rem; text-transform: uppercase; letter-spacing: 1px;
+      color: #667eea; margin: 1rem 0 .6rem;
+    }
+
+    /* ── Input grid ── */
+    .input-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px,1fr)); gap: .75rem; margin-bottom: 1rem; }
+    .input-group label { display: block; font-size: .75rem; color: rgba(255,255,255,.5); margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .5px; }
+    .input-group input, .input-group select {
+      width: 100%; padding: .5rem .7rem;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px; color: #fff; font-size: .9rem; outline: none; transition: border-color .2s;
+    }
+    .input-group input:focus, .input-group select:focus { border-color: #667eea; }
+    .input-group select option { background: #1a1a2e; }
+
+    /* ── Buttons ── */
+    .btn-predict {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      width: 100%; padding: .8rem; margin-top: 1.2rem;
+      background: linear-gradient(135deg,#667eea,#764ba2);
+      border: none; border-radius: 10px; color: #fff;
+      font-size: 1rem; font-weight: 600; cursor: pointer; transition: all .25s;
+    }
+    .btn-predict:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102,126,234,.4); }
+    .btn-predict:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 2px dashed rgba(255,255,255,.2); border-radius: 12px;
+      padding: 2.5rem; text-align: center; cursor: pointer; transition: border-color .2s; margin-bottom: 1rem;
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: #667eea; }
+    .upload-zone p { color: rgba(255,255,255,.45); margin-top: .5rem; font-size: .9rem; }
+    #file-input { display: none; }
+
+    /* ── Result ── */
+    #result-section { margin-top: 2rem; }
+    .result-card { border-radius: 16px; padding: 1.8rem; text-align: center; margin-bottom: 1.5rem; }
+    .result-safe  { background: rgba(46,204,113,.1); border: 1px solid rgba(46,204,113,.4); }
+    .result-fraud {
+      background: rgba(231,76,60,.1); border: 1px solid rgba(231,76,60,.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 10px rgba(231,76,60,.2)} 50%{box-shadow:0 0 28px rgba(231,76,60,.5)} }
+    .result-card h2 { font-size: 1.6rem; margin-bottom: .4rem; }
+    .result-card p  { color: rgba(255,255,255,.7); }
+
+    /* ── Metrics ── */
+    .metrics-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .metric {
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; padding: 1rem; text-align: center;
+    }
+    .metric .label { font-size: .72rem; text-transform: uppercase; letter-spacing: 1px; color: #a5b4fc; margin-bottom: .4rem; }
+    .metric .value { font-size: 1.5rem; font-weight: 700; }
+
+    /* ── Charts ── */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .chart-box {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px; padding: 1rem;
+    }
+    .chart-box h3 { font-size: .82rem; color: rgba(255,255,255,.55); margin-bottom: .8rem; text-align: center; }
+
+    /* ── Batch table ── */
+    .summary-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.2rem; }
+    .table-wrap { overflow-x: auto; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th { background: rgba(102,126,234,.2); padding: .6rem 1rem; text-align: left; color: #a5b4fc; }
+    td { padding: .55rem 1rem; border-bottom: 1px solid rgba(255,255,255,.06); }
+    tr:last-child td { border-bottom: none; }
+    .badge-fraud { color: #e74c3c; font-weight: 600; }
+    .badge-legit { color: #2ecc71; font-weight: 600; }
+
+    /* ── Spinner ── */
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Warn / Error ── */
+    .warn-box {
+      background: rgba(243,156,18,.1); border: 1px solid rgba(243,156,18,.4);
+      border-radius: 12px; padding: 1.2rem 1.5rem; color: #f39c12; margin-bottom: 1.5rem;
+    }
+    .warn-box code { background: rgba(0,0,0,.3); padding: .15rem .4rem; border-radius: 4px; }
+    .error-box {
+      background: rgba(231,76,60,.1); border: 1px solid rgba(231,76,60,.4);
+      border-radius: 10px; padding: 1rem 1.2rem; color: #e74c3c; margin-top: 1rem;
+    }
+
+    /* ── Footer ── */
+    footer { text-align: center; padding: 2rem 0; color: rgba(255,255,255,.25); font-size: .82rem; border-top: 1px solid rgba(255,255,255,.06); margin-top: 2rem; }
+
+    @media (max-width: 600px) {
+      .metrics-row, .charts-row, .summary-row { grid-template-columns: 1fr; }
+      .page-header h1 { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <div class="container">
+      <a class="navbar-brand" style="font-family:Roboto;font-weight:100" href="/">Credit Card Fraud Detection</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link slide" style="font-family:Roboto;font-weight:300" href="/dashboard">Home</a></li>
+          <li class="nav-item"><a class="nav-link slide" style="font-family:Roboto;font-weight:300" href="/model">Model</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" style="font-family:Roboto;font-weight:300">
+              {{ username }} <i class="fas fa-chevron-down fa-xs"></i>
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/logout">Logout</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <h1>🔒 Fraud Detection Model</h1>
+      <p style="color:rgba(255,255,255,.5); margin-top:.3rem; font-size:.9rem;">
+        Real-time ML-powered transaction analysis
+      </p>
+    </div>
+    {% if model_name %}
+    <div class="model-badge">🧠 Active model: <strong>{{ model_name }}</strong></div>
+    {% endif %}
+  </div>
+
+  {% if not model_loaded %}
+  <div class="content-wrap">
+    <div class="warn-box">
+      ⚠️ <strong>Model not found.</strong> Run <code>python model_training.py</code> first, then restart the server.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tabs -->
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('manual',this)">✏️ Manual Input</button>
+      <button class="tab-btn" onclick="switchTab('random',this)">🎲 Random Sample</button>
+      <button class="tab-btn" onclick="switchTab('batch',this)">📄 CSV Upload</button>
+    </div>
+  </div>
+
+  <div class="content-wrap">
+
+    <!-- ── Manual Input ── -->
+    <div id="tab-manual" class="tab-content">
+      <div class="card-dark">
+        <h2>Enter Transaction Features</h2>
+        <div class="section-label">PCA Components — V1 to V28</div>
+        <div class="input-grid" id="v-inputs"></div>
+        <div class="section-label">Scaled Features</div>
+        <div class="input-grid">
+          <div class="input-group">
+            <label>⏱ scaled_time</label>
+            <input type="number" id="scaled_time" value="0" step="0.01" />
+          </div>
+          <div class="input-group">
+            <label>💰 scaled_amount</label>
+            <input type="number" id="scaled_amount" value="0" step="0.01" />
+          </div>
+        </div>
+        <button class="btn-predict" id="predict-btn" onclick="runManualPredict()">
+          🔍 Analyze Transaction
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Random Sample ── -->
+    <div id="tab-random" class="tab-content" style="display:none">
+      <div class="card-dark">
+        <h2>Generate a Random Transaction</h2>
+        <div class="input-group" style="max-width:320px; margin-bottom:.5rem">
+          <label>Sample Type</label>
+          <select id="sample-type">
+            <option value="normal">Random Normal</option>
+            <option value="suspicious">Suspicious (High Deviation)</option>
+            <option value="legit">Typical Legitimate</option>
+          </select>
+        </div>
+        <button class="btn-predict" id="random-btn" onclick="runRandomPredict()">
+          🔄 Generate &amp; Predict
+        </button>
+      </div>
+    </div>
+
+    <!-- ── CSV Upload ── -->
+    <div id="tab-batch" class="tab-content" style="display:none">
+      <div class="card-dark">
+        <h2>Batch Prediction via CSV Upload</h2>
+        <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <div style="font-size:2.5rem">📂</div>
+          <p>Click or drag &amp; drop a CSV file here</p>
+          <p id="file-name" style="color:#a5b4fc; margin-top:.4rem"></p>
+        </div>
+        <input type="file" id="file-input" accept=".csv" onchange="handleFileSelect(this)" />
+        <button class="btn-predict" id="batch-btn" onclick="runBatchPredict()" disabled>
+          🔍 Run Batch Prediction
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Result ── -->
+    <div id="result-section" style="display:none"></div>
+
+  </div>
+
+  <footer style="margin-top:20px; font-size:12px; color:#888;">Project by: P. Anirudh, Saketh Abhinandan, Jashwanth | Academic project — for demonstration purposes only.</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const FEATURE_NAMES = {{ feature_names | tojson }};
+
+    // Build V1-V28 inputs
+    const vGrid = document.getElementById('v-inputs');
+    for (let i = 1; i <= 28; i++) {
+      vGrid.innerHTML += `
+        <div class="input-group">
+          <label>V${i}</label>
+          <input type="number" id="feat_V${i}" value="0" step="0.01" />
+        </div>`;
+    }
+
+    // Tab switching
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + name).style.display = 'block';
+      btn.classList.add('active');
+      document.getElementById('result-section').style.display = 'none';
+    }
+
+    // Collect manual features
+    function collectFeatures() {
+      const features = {};
+      FEATURE_NAMES.forEach(name => {
+        const el = document.getElementById('feat_' + name) || document.getElementById(name);
+        features[name] = el ? (parseFloat(el.value) || 0) : 0;
+      });
+      return features;
+    }
+
+    // Manual predict
+    async function runManualPredict() {
+      const btn = document.getElementById('predict-btn');
+      setLoading(btn, true, 'predict');
+      await callPredict(collectFeatures());
+      setLoading(btn, false, 'predict');
+    }
+
+    // Random predict
+    async function runRandomPredict() {
+      const btn = document.getElementById('random-btn');
+      setLoading(btn, true, 'random');
+      const type = document.getElementById('sample-type').value;
+      const features = {};
+      FEATURE_NAMES.forEach(name => {
+        let val = randn();
+        if (type === 'suspicious') {
+          val *= 3;
+          if (name === 'V14') val = -5;
+          if (name === 'V12') val = -4;
+          if (name === 'V10') val = -3.5;
+        } else if (type === 'legit') {
+          val *= 0.3;
+        }
+        features[name] = parseFloat(val.toFixed(6));
+      });
+      await callPredict(features);
+      setLoading(btn, false, 'random');
+    }
+
+    function randn() {
+      let u = 0, v = 0;
+      while (!u) u = Math.random();
+      while (!v) v = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    async function callPredict(features) {
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ features }),
+        });
+        const data = await res.json();
+        if (data.error) { showError(data.error); return; }
+        renderResult(data);
+      } catch (e) { showError('Network error: ' + e.message); }
+    }
+
+    // File handling
+    let selectedFile = null;
+    function handleFileSelect(input) {
+      selectedFile = input.files[0];
+      if (selectedFile) {
+        document.getElementById('file-name').textContent = selectedFile.name;
+        document.getElementById('batch-btn').disabled = false;
+      }
+    }
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault(); dropZone.classList.remove('drag-over');
+      selectedFile = e.dataTransfer.files[0];
+      if (selectedFile) {
+        document.getElementById('file-name').textContent = selectedFile.name;
+        document.getElementById('batch-btn').disabled = false;
+      }
+    });
+
+    async function runBatchPredict() {
+      if (!selectedFile) return;
+      const btn = document.getElementById('batch-btn');
+      setLoading(btn, true, 'batch');
+      const form = new FormData();
+      form.append('file', selectedFile);
+      try {
+        const res = await fetch('/api/predict-batch', { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.error) { showError(data.error); } else { renderBatchResult(data); }
+      } catch (e) { showError('Network error: ' + e.message); }
+      setLoading(btn, false, 'batch');
+    }
+
+    // Render single result
+    let gaugeChart = null, barChart = null;
+    function renderResult(data) {
+      const section = document.getElementById('result-section');
+      section.style.display = 'block';
+      const isFraud = data.prediction === 1;
+      const riskColor = data.risk_level === 'Low' ? '#2ecc71' : data.risk_level === 'Medium' ? '#f39c12' : '#e74c3c';
+
+      section.innerHTML = `
+        <div class="result-card ${isFraud ? 'result-fraud' : 'result-safe'}">
+          <h2>${isFraud ? '🚨 FRAUDULENT TRANSACTION DETECTED' : '✅ LEGITIMATE TRANSACTION'}</h2>
+          <p>${isFraud ? 'This transaction has been flagged as potentially fraudulent.' : 'This transaction appears to be legitimate.'}</p>
+        </div>
+        <div class="metrics-row">
+          <div class="metric">
+            <div class="label">Legitimate Probability</div>
+            <div class="value" style="color:#2ecc71">${data.probability_legitimate}%</div>
+          </div>
+          <div class="metric">
+            <div class="label">Fraud Probability</div>
+            <div class="value" style="color:#e74c3c">${data.probability_fraud}%</div>
+          </div>
+          <div class="metric">
+            <div class="label">Risk Level</div>
+            <div class="value" style="color:${riskColor}">⚡ ${data.risk_level}</div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-box">
+            <h3>Fraud Risk Gauge</h3>
+            <canvas id="gaugeCanvas" height="200"></canvas>
+          </div>
+          <div class="chart-box">
+            <h3>Class Probabilities</h3>
+            <canvas id="barCanvas" height="200"></canvas>
+          </div>
+        </div>`;
+
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      if (gaugeChart) gaugeChart.destroy();
+      gaugeChart = new Chart(document.getElementById('gaugeCanvas'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Fraud Risk', 'Safe'],
+          datasets: [{
+            data: [data.probability_fraud, 100 - data.probability_fraud],
+            backgroundColor: ['rgba(231,76,60,.85)', 'rgba(255,255,255,.08)'],
+            borderColor: ['#e74c3c', 'rgba(255,255,255,.1)'],
+            borderWidth: 2, circumference: 180, rotation: 270,
+          }]
+        },
+        options: {
+          responsive: true, cutout: '70%',
+          plugins: {
+            legend: { labels: { color: '#fff' } },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.toFixed(2)}%` } }
+          }
+        }
+      });
+
+      if (barChart) barChart.destroy();
+      barChart = new Chart(document.getElementById('barCanvas'), {
+        type: 'bar',
+        data: {
+          labels: ['Legitimate', 'Fraudulent'],
+          datasets: [{
+            data: [data.probability_legitimate, data.probability_fraud],
+            backgroundColor: ['rgba(46,204,113,.7)', 'rgba(231,76,60,.7)'],
+            borderColor: ['#2ecc71', '#e74c3c'],
+            borderWidth: 2, borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { min: 0, max: 100, ticks: { color: '#aaa', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,.07)' } },
+            x: { ticks: { color: '#aaa' }, grid: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    // Render batch result
+    function renderBatchResult(data) {
+      const section = document.getElementById('result-section');
+      section.style.display = 'block';
+      const rows = data.results.slice(0, 200).map(r => `
+        <tr>
+          <td>${r.index}</td>
+          <td class="${r.status === 'Fraudulent' ? 'badge-fraud' : 'badge-legit'}">
+            ${r.status === 'Fraudulent' ? '🚨' : '✅'} ${r.status}
+          </td>
+          <td>${r.fraud_probability}%</td>
+        </tr>`).join('');
+
+      section.innerHTML = `
+        <div class="summary-row">
+          <div class="metric"><div class="label">Total</div><div class="value">${data.total.toLocaleString()}</div></div>
+          <div class="metric"><div class="label">Legitimate</div><div class="value" style="color:#2ecc71">${data.legit_count.toLocaleString()}</div></div>
+          <div class="metric"><div class="label">Fraudulent</div><div class="value" style="color:#e74c3c">${data.fraud_count.toLocaleString()}</div></div>
+        </div>
+        <div class="card-dark">
+          <h2>Prediction Results ${data.results.length > 200 ? '(showing first 200)' : ''}</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Status</th><th>Fraud Probability</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>`;
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function showError(msg) {
+      const section = document.getElementById('result-section');
+      section.style.display = 'block';
+      section.innerHTML = `<div class="error-box">❌ ${msg}</div>`;
+    }
+
+    function setLoading(btn, loading, type) {
+      btn.disabled = loading;
+      const labels = { predict: '🔍 Analyze Transaction', random: '🔄 Generate &amp; Predict', batch: '🔍 Run Batch Prediction' };
+      btn.innerHTML = loading ? `<span class="spinner"></span> Analyzing…` : labels[type];
+    }
+  </script>
+</body>
+</html>

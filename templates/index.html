@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CCFD — Credit Card Fraud Detection</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Delius&family=Roboto:wght@100;300;400;500;700;900&family=Tiny5&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="bg-white">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <div class="container">
+      <a class="navbar-brand roboto-thin" href="/">Credit Card Fraud Detection</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link roboto-light slide" href="#home">Home</a></li>
+          <li class="nav-item"><a class="nav-link roboto-light slide" href="#about">About</a></li>
+          <li class="nav-item"><a class="nav-link roboto-light slide" href="/login">Login</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Home Section -->
+  <section class="home-section" id="home">
+    <div class="home d-flex container">
+      <div class="ccfd">
+        <div class="delius-regular">
+          <div class="head">Credit Card</div>
+          <div class="head">Fraud Detection</div>
+        </div>
+        <div class="subhead roboto-thin">
+          A machine learning web application to detect fraudulent credit card transactions in real time.
+        </div>
+        <form id="dummyLoginForm" action="/login" method="post" style="display:none">
+          <input type="hidden" name="username" value="dummy">
+          <input type="hidden" name="password" value="dummy">
+        </form>
+        <button class="register roboto-medium mt-4" type="button" onclick="document.getElementById('dummyLoginForm').submit()">
+          Quick Demo Login
+        </button>
+      </div>
+      <div class="parallax-container" id="parallax-container">
+        <div class="parallax-image" id="parallax-image" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Marquee -->
+  <section class="help-section">
+    <div class="help tiny5-regular">
+      <marquee scrollamount="4">Login to access the ML model &nbsp;|&nbsp; Detect fraud in real time &nbsp;|&nbsp; Upload CSV for batch predictions</marquee>
+    </div>
+  </section>
+
+  <!-- About / Newsletter -->
+  <section class="newsletter" id="about">
+    <div class="news container">
+      <div class="row">
+        <div class="col-md-6 containerL">
+          <h2 class="title">About</h2>
+          <p class="description">
+            This project uses machine learning to detect fraudulent credit card transactions.
+            The model is trained on the Kaggle Credit Card Fraud dataset with SMOTE to handle class imbalance.
+          </p>
+          <p class="description" style="color:#4a4a4a; font-size:.9rem;">
+            <strong>Models evaluated:</strong> Logistic Regression, Random Forest, SVM, KNN<br>
+            <strong>Best model</strong> selected automatically by ROC-AUC score.
+          </p>
+        </div>
+        <div class="col-md-6 containerR">
+          <h2 class="title">Get Started</h2>
+          <p class="description">Login or register to access the fraud detection model.</p>
+          <a href="/login"><button class="register" type="button">Register / Login</button></a>
+          <br><br>
+          <button class="register roboto-medium" type="button"
+            onclick="document.getElementById('dummyLoginForm').submit()"
+            style="background: linear-gradient(45deg,#28a745,#20c997);">
+            Quick Demo Login
+          </button>
+          <p class="text-muted roboto-light mt-2" style="font-size:.8rem;">Use "Quick Demo Login" for instant access</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <section class="footer-section">
+    <canvas id="canvas"></canvas>
+    <div class="footer">
+      <div class="row social-links">
+        <div class="col text-center">
+          <a href="#"><i class="fa fa-github"></i></a>
+          <a href="#"><i class="fa fa-linkedin"></i></a>
+          <a href="#"><i class="fa fa-twitter"></i></a>
+        </div>
+      </div>
+      <div class="row links">
+        <div class="col text-center">
+          <ul class="list-inline">
+            <li class="list-inline-item"><a href="#">Contact</a></li>
+            <li class="list-inline-item"><a href="#">Privacy Policy</a></li>
+            <li class="list-inline-item"><a href="#">Terms</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="row copyright">
+        <div class="col text-center">
+          <p>Project by: P. Anirudh, Saketh Abhinandan, Jashwanth</p>
+          <p>CCFD © 2024 — Credit Card Fraud Detection | Academic Project</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="https://twgljs.org/dist/4.x/twgl.min.js"></script>
+
+  <script>
+    // Parallax
+    const pc = document.getElementById('parallax-container');
+    const pi = document.getElementById('parallax-image');
+    if (pc) pc.addEventListener('mousemove', e => {
+      const x = (pc.offsetWidth  / 2 - e.pageX + pc.offsetLeft) / 30;
+      const y = (pc.offsetHeight / 2 - e.pageY + pc.offsetTop)  / 30;
+      pi.style.transform = `translate(${x}px, ${y}px)`;
+    });
+  </script>
+
+  <!-- WebGL shaders for footer -->
+  <script id="vertexShader" type="x-shader/x-vertex">
+    attribute vec4 position; void main(){ gl_Position = vec4(position); }
+  </script>
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+    uniform vec2 u_resolution; uniform float u_time;
+    vec2 random2(vec2 st){ st=vec2(dot(st,vec2(127.1,311.7)),dot(st,vec2(269.5,183.3))); return -1.0+2.0*fract(sin(st)*43758.5453123); }
+    float noise(vec2 st){ vec2 i=floor(st); vec2 f=fract(st); vec2 u=f*f*(3.0-2.0*f); return mix(mix(dot(random2(i+vec2(0,0)),f-vec2(0,0)),dot(random2(i+vec2(1,0)),f-vec2(1,0)),u.x),mix(dot(random2(i+vec2(0,1)),f-vec2(0,1)),dot(random2(i+vec2(1,1)),f-vec2(1,1)),u.x),u.y); }
+    void main(){
+      vec2 uv=gl_FragCoord.xy/u_resolution; float wo=0.3,wc=1.0,wf=0.25,ws=2.0;
+      float wMin=wc-wf,wMax=wc+wf;
+      uv.x*=u_resolution.x/u_resolution.y; uv.x+=1787.74328; uv.y*=2.0;
+      float r=smoothstep(wMin,wMax,uv.y-noise(vec2(uv.x,u_time/ws)));
+      float b=smoothstep(wMin,wMax,uv.y-noise(vec2(uv.x,u_time/ws-wo)));
+      float g=smoothstep(wMin,wMax,uv.y-noise(vec2(uv.x,u_time/ws+wo)));
+      gl_FragColor=vec4(r,b,g,1.0);
+    }
+  </script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
