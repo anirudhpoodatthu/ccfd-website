@@ -364,10 +364,20 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ features }),
         });
+        
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+           const text = await res.text();
+           console.error("Server returned non-JSON response:", text);
+           throw new Error("Server returned HTML/Text instead of JSON. Is the Flask server running correctly?");
+        }
+
         const data = await res.json();
         if (data.error) { showError(data.error); return; }
         renderResult(data);
-      } catch (e) { showError('Network error: ' + e.message); }
+      } catch (e) { 
+        showError('Network error: ' + e.message); 
+      }
     }
 
     // File handling
@@ -399,9 +409,19 @@
       form.append('file', selectedFile);
       try {
         const res = await fetch('/api/predict-batch', { method: 'POST', body: form });
+        
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+           const text = await res.text();
+           console.error("Server returned non-JSON response:", text);
+           throw new Error("Server returned HTML/Text instead of JSON. Are you running the Python app or just opening the HTML file?");
+        }
+
         const data = await res.json();
         if (data.error) { showError(data.error); } else { renderBatchResult(data); }
-      } catch (e) { showError('Network error: ' + e.message); }
+      } catch (e) { 
+        showError('Network error: ' + e.message); 
+      }
       setLoading(btn, false, 'batch');
     }
 

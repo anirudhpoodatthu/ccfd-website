@@ -1,74 +1,139 @@
-"""
-=============================================================================
-CREDIT CARD FRAUD DETECTION – FLASK WEB APPLICATION
-=============================================================================
-A professional web interface for real-time credit card fraud detection.
-Loads the trained ML model and provides an interactive UI for predictions.
-
-Run:  python app.py
-=============================================================================
-"""
-
 import os
 import pickle
 import numpy as np
 import pandas as pd
-from flask import Flask, render_template, request, jsonify
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, session, jsonify
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # APP CONFIGURATION
 # ──────────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "fraud-detection-secret-key-2026"
+app.secret_key = b'ccfd_secret_key_2024'  # Standardized key
 
 MODEL_PATH = "model.pkl"
-
+USERS = {"demo": {"password": "demo123", "email": "demo@ccfd.com"}}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LOAD MODEL
 # ──────────────────────────────────────────────────────────────────────────────
+model_data = None
+
 def load_model():
     """Load the trained model from pickle file."""
+    global model_data
     if not os.path.exists(MODEL_PATH):
+        print("[WARN] model.pkl not found. Run model_training.py first.")
         return None
     with open(MODEL_PATH, "rb") as f:
         model_data = pickle.load(f)
+    print(f"[OK] Model loaded: {model_data.get('model_name', 'Unknown')}")
     return model_data
 
-
-model_data = load_model()
-
+load_model()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# ROUTES
+# ROUTES (Authentication & Pages)
 # ──────────────────────────────────────────────────────────────────────────────
+
 @app.route("/")
 def index():
-    """Render the main prediction page."""
-    model_loaded = model_data is not None
-    model_name = model_data.get("model_name", "N/A") if model_loaded else "Not loaded"
-    feature_names = model_data.get("feature_names", []) if model_loaded else []
+    """Landing page."""
+    return render_template("index.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        # Quick demo login
+        if username == "dummy" and password == "dummy":
+            session["username"] = "Demo User"
+            return redirect(url_for("dashboard"))
+
+        user = USERS.get(username)
+        if user and user["password"] == password:
+            session["username"] = username
+            return redirect(url_for("dashboard"))
+
+        session["error"] = "Invalid username or password."
+        return redirect(url_for("login"))
+
+    error = session.pop("error", None)
+    return render_template("login.html", error=error)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        email    = request.form.get("email", "").strip()
+
+        if username in USERS:
+            session["reg_error"] = "Username already exists."
+            return redirect(url_for("login"))
+
+        USERS[username] = {"password": password, "email": email}
+        session["username"] = username
+        return redirect(url_for("dashboard"))
+
+    return redirect(url_for("login"))
+
+
+@app.route("/dashboard")
+def dashboard():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    return render_template("dashboard.html", username=session["username"])
+
+
+@app.route("/model")
+def model_page():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    
+    loaded = model_data is not None
+    model_name = model_data.get("model_name", "N/A") if loaded else "Not loaded"
+    feature_names = model_data.get("feature_names", []) if loaded else []
+    
     return render_template(
-        "index.html",
-        model_loaded=model_loaded,
+        "model.html",
+        username=session["username"],
+        model_loaded=loaded,
         model_name=model_name,
         feature_names=feature_names,
     )
 
 
-@app.route("/predict", methods=["POST"])
-def predict():
-    """
-    Accept transaction features via JSON POST and return fraud prediction.
-    Expects: { "features": { "V1": 0.0, "V2": 0.0, ... } }
-    Returns: { "prediction": 0|1, "probability": [p0, p1], "risk_level": "..." }
-    """
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+    return redirect(url_for("index"))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# API ROUTES (Standardized under /api/)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@app.route("/api/predict", methods=["POST"])
+def api_predict():
+    """Single transaction prediction API."""
+    if "username" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
     if model_data is None:
-        return jsonify({"error": "Model not loaded. Run model_training.py first."}), 500
+        return jsonify({"error": "Model not loaded."}), 503
 
     try:
         data = request.get_json()
-        feature_values = data.get("features", {})
+        if not data or "features" not in data:
+            return jsonify({"error": "Missing features."}), 400
+
+        feature_values = data["features"]
         feature_names = model_data["feature_names"]
         model = model_data["model"]
 
@@ -79,40 +144,31 @@ def predict():
         probability = model.predict_proba(features)[0].tolist()
 
         fraud_prob = probability[1]
-        if fraud_prob < 0.3:
-            risk_level = "Low"
-        elif fraud_prob < 0.7:
-            risk_level = "Medium"
-        else:
-            risk_level = "High"
+        risk_level = "High" if fraud_prob >= 0.7 else "Medium" if fraud_prob >= 0.3 else "Low"
 
         return jsonify({
             "prediction": prediction,
-            "probability": probability,
-            "fraud_probability_pct": round(fraud_prob * 100, 2),
-            "legit_probability_pct": round(probability[0] * 100, 2),
+            "probability_legitimate": round(probability[0] * 100, 2),
+            "probability_fraud":      round(fraud_prob * 100, 2),
             "risk_level": risk_level,
             "label": "Fraudulent" if prediction == 1 else "Legitimate",
         })
-
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route("/predict-batch", methods=["POST"])
-def predict_batch():
-    """
-    Accept a CSV file upload and return batch predictions.
-    """
+@app.route("/api/predict-batch", methods=["POST"])
+def api_predict_batch():
+    """Batch prediction API via CSV upload."""
+    if "username" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
     if model_data is None:
-        return jsonify({"error": "Model not loaded."}), 500
+        return jsonify({"error": "Model not loaded."}), 503
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded."}), 400
 
     try:
-        file = request.files.get("file")
-        if file is None:
-            return jsonify({"error": "No file uploaded."}), 400
-
-        df = pd.read_csv(file)
+        df = pd.read_csv(request.files["file"])
         feature_names = model_data["feature_names"]
         model = model_data["model"]
 
@@ -131,35 +187,31 @@ def predict_batch():
         probabilities = model.predict_proba(features)[:, 1].tolist()
 
         results = []
-        for i in range(len(predictions)):
-            prob = probabilities[i]
+        for i, (p, prob) in enumerate(zip(predictions, probabilities)):
             results.append({
                 "index": i + 1,
-                "prediction": predictions[i],
-                "label": "Fraudulent" if predictions[i] == 1 else "Legitimate",
+                "prediction": p,
+                "status": "Fraudulent" if p == 1 else "Legitimate",
                 "fraud_probability": round(prob * 100, 2),
                 "risk_level": "High" if prob >= 0.7 else "Medium" if prob >= 0.3 else "Low",
             })
 
         fraud_count = sum(1 for p in predictions if p == 1)
-        legit_count = len(predictions) - fraud_count
-
         return jsonify({
             "total": len(predictions),
             "fraud_count": fraud_count,
-            "legit_count": legit_count,
+            "legit_count": len(predictions) - fraud_count,
             "results": results,
         })
-
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error processing file: {str(e)}"}), 500
 
 
-@app.route("/model-info")
+@app.route("/api/model-info")
 def model_info():
     """Return model metadata."""
     if model_data is None:
-        return jsonify({"loaded": False})
+        return jsonify({"loaded": False}), 503
 
     return jsonify({
         "loaded": True,
@@ -174,13 +226,10 @@ def model_info():
 # ──────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print("  Credit Card Fraud Detection - Web Server")
+    print("  Credit Card Fraud Detection - Unified Web Server")
     print("=" * 60)
-    if model_data:
-        print(f"  [OK] Model loaded: {model_data.get('model_name', 'Unknown')}")
-    else:
-        print("  [!!] Model not found. Run model_training.py first.")
     print(f"  URL: http://127.0.0.1:5000")
     print("=" * 60 + "\n")
 
     app.run(debug=True, host="127.0.0.1", port=5000)
+

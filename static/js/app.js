@@ -50,7 +50,7 @@ async function predictManual() {
   hideResult();
 
   try {
-    const response = await fetch('/predict', {
+    const response = await fetch('/api/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ features }),
@@ -229,7 +229,7 @@ async function predictBatch() {
   formData.append('file', fileInput.files[0]);
 
   try {
-    const response = await fetch('/predict-batch', {
+    const response = await fetch('/api/predict-batch', {
       method: 'POST',
       body: formData,
     });
