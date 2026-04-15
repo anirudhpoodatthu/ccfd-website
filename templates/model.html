@@ -337,12 +337,19 @@
       FEATURE_NAMES.forEach(name => {
         let val = randn();
         if (type === 'suspicious') {
-          val *= 3;
-          if (name === 'V14') val = -5;
-          if (name === 'V12') val = -4;
-          if (name === 'V10') val = -3.5;
+          // Generate highly suspicious patterns based on feature importance
+          val *= 4.5;  // Increased deviation
+          if (name === 'V14') val = -8.5;   // Strongest fraud indicator
+          if (name === 'V12') val = -6.2;   // Second strongest
+          if (name === 'V10') val = -5.8;   // Third strongest
+          if (name === 'V17') val = -4.5;
+          if (name === 'V16') val = 5.2;
+          if (name === 'V3') val = -3.8;
+          if (name === 'V7') val = -4.1;
+          if (name === 'V11') val = 3.9;
+          if (name === 'scaled_amount') val = 2.5;  // Higher amount
         } else if (type === 'legit') {
-          val *= 0.3;
+          val *= 0.3;  // Keep legitimate transactions close to normal
         }
         features[name] = parseFloat(val.toFixed(6));
       });
