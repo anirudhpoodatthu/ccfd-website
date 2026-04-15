@@ -24,15 +24,24 @@ model_data = None
 def load_model():
     """Load the trained model from pickle file."""
     global model_data
-    if not os.path.exists(MODEL_PATH):
-        print("[WARN] model.pkl not found. Run model_training.py first.")
+    try:
+        if not os.path.exists(MODEL_PATH):
+            print(f"[WARN] {MODEL_PATH} not found. Model features will be disabled.")
+            return None
+        with open(MODEL_PATH, "rb") as f:
+            model_data = pickle.load(f)
+        print(f"[OK] Model loaded: {model_data.get('model_name', 'Unknown')}")
+        print(f"[OK] Features: {len(model_data.get('feature_names', []))}")
+        return model_data
+    except Exception as e:
+        print(f"[ERROR] Failed to load model: {e}")
+        import traceback
+        traceback.print_exc()
         return None
-    with open(MODEL_PATH, "rb") as f:
-        model_data = pickle.load(f)
-    print(f"[OK] Model loaded: {model_data.get('model_name', 'Unknown')}")
-    return model_data
 
+print("[INFO] Starting Credit Card Fraud Detection App...")
 load_model()
+print(f"[INFO] Model status: {'Loaded' if model_data else 'Not loaded'}")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # ROUTES (Authentication & Pages)
