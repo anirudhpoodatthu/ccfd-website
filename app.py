@@ -154,7 +154,9 @@ def api_predict():
             "label": "Fraudulent" if prediction == 1 else "Legitimate",
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        print(f"[ERROR] Predict: {traceback.format_exc()}")
+        return jsonify({"error": f"Backend processing error: {str(e)}"}), 500
 
 
 @app.route("/api/predict-batch", methods=["POST"])
@@ -168,7 +170,11 @@ def api_predict_batch():
         return jsonify({"error": "No file uploaded."}), 400
 
     try:
-        df = pd.read_csv(request.files["file"])
+        file = request.files["file"]
+        if file.filename == '':
+            return jsonify({"error": "No file selected."}), 400
+            
+        df = pd.read_csv(file)
         feature_names = model_data["feature_names"]
         model = model_data["model"]
 
@@ -204,7 +210,9 @@ def api_predict_batch():
             "results": results,
         })
     except Exception as e:
-        return jsonify({"error": f"Error processing file: {str(e)}"}), 500
+        import traceback
+        print(f"[ERROR] Batch Predict: {traceback.format_exc()}")
+        return jsonify({"error": f"File processing failed: {str(e)}"}), 500
 
 
 @app.route("/api/model-info")
@@ -218,6 +226,18 @@ def model_info():
         "model_name": model_data.get("model_name", "Unknown"),
         "feature_count": len(model_data.get("feature_names", [])),
         "feature_names": model_data.get("feature_names", []),
+    })
+
+
+@app.route("/api/health")
+def health_check():
+    """Simple health check endpoint."""
+    return jsonify({
+        "status": "online",
+        "model_loaded": model_data is not None,
+        "username": session.get("username", "Guest"),
+        "version": "1.1.0",
+        "timestamp": "2026-04-15"
     })
 
 
